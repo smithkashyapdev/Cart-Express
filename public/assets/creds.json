@@ -1,0 +1,32 @@
+{
+    "user":[
+        {
+            "id": 1,
+            "password": "user@4321",
+            "fullname": "smith kashyap",
+            "email": "smith@gmail.com",
+            "phone": "1234567890",
+            "cart": [],
+            "bulling": {
+                "address": "123, abc street",
+                "city": "xyz",
+                "state": "abc",
+                "pincode": "1234567"
+            }
+        },
+        {
+            "id": 2,
+            "password": "user@4321",
+            "fullname": "Amit kumar",
+            "email": "amit@gmail.com",
+            "phone": "1234567890",
+            "cart": [],
+            "bulling": {
+                "address": "123, abc street",
+                "city": "xyz",
+                "state": "abc",
+                "pincode": "123456"
+            }
+        }
+    ]
+}
