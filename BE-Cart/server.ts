@@ -1,5 +1,6 @@
-import express from 'express';
 import dotenv from 'dotenv';
+dotenv.config();
+import express from 'express';
 import cors from 'cors';
 import connectDB from './src/config/db'
 import authRoute from './src/routes/user-route'
@@ -7,7 +8,6 @@ import { logQueryStats } from './src/utils/query-stats';
 import mongoose from 'mongoose';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './src/docs/swaggerOptions';
-import { connectRedis } from './src/config/redisClient';
 const { isMainThread, threadId } = require('worker_threads');
 
 const cluster = require('cluster');
@@ -15,20 +15,8 @@ const os = require('os');
 const numCPUs = os.cpus().length;
 
 
-if (cluster.isPrimary) {
-    console.log(`👑 Master process PID: ${process.pid}`);
-    console.log(`🔧 Forking ${numCPUs} workers...\n`);
-    for (let i = 0; i < numCPUs; i++) {
-        cluster.fork();
-    }
-    cluster.on('exit', (worker, code, signal) => {
-        console.error(`Worker ${worker.process.pid} died. Spawning a new one...`);
-        cluster.fork();
-    });
-} else {
-    dotenv.config();
-    connectRedis();
-    connectDB();
+ dotenv.config();
+    connectDB()
 
     const app = express();
     const PORT = process.env.PORT || 5000;
@@ -53,4 +41,18 @@ if (cluster.isPrimary) {
     });
 
 
-}
+
+// if (cluster.isPrimary) {
+//     console.log(`👑 Master process PID: ${process.pid}`);
+//     console.log(`🔧 Forking ${numCPUs} workers...\n`);
+//     for (let i = 0; i < numCPUs; i++) {
+//         cluster.fork();
+//     }
+//     cluster.on('exit', (worker, code, signal) => {
+//         console.error(`Worker ${worker.process.pid} died. Spawning a new one...`);
+//         cluster.fork();
+//     });
+// } else {
+   
+
+// }
