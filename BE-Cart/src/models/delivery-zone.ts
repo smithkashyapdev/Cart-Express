@@ -22,6 +22,5 @@ const deliveryZoneSchema = new Schema<IDeliveryZone>({
 
 deliveryZoneSchema.index({ area: '2dsphere' });
 deliveryZoneSchema.index({ pincode: 1 }, { unique: true });
-deliveryZoneSchema.index({ name: 1 }, { unique: true });
 const DeliveryZone = moongoose.model<IDeliveryZone>('DeliveryZone', deliveryZoneSchema);
 export default DeliveryZone;

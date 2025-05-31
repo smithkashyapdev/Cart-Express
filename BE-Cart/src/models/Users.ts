@@ -13,6 +13,8 @@ interface Address {
   isDefault: boolean;
 }
 
+export type UserRole = 'user' | 'admin' | 'seller';
+
 // Main User interface extending Document
 export interface UserDocument extends Document {
   name: string;
@@ -21,6 +23,7 @@ export interface UserDocument extends Document {
   password: string;
   address: Address[];
   isVerified: boolean;
+  role: UserRole;  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -60,11 +63,13 @@ const userSchema = new Schema<UserDocument>(
     password: { type: String, required: true },
     address: [addressSchema],
     isVerified: { type: Boolean, default: false },
+    role: { type: String, enum: ['user', 'admin', 'seller'], default: 'user' }
   },
   {
     timestamps: true, // automatically adds createdAt and updatedAt
   }
 );
-
+userSchema.index({ mobile: 1 }, { unique: true }); // Ensure mobile is unique
+userSchema.index({ email: 1 }, { unique: true }); // Ensure email is unique
 const Users = mongoose.model<UserDocument>('users', userSchema);
 export default Users;

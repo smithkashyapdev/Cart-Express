@@ -58,6 +58,10 @@ const orderSchema = new Schema<Order>({
 }, {
     timestamps: true, // automatically adds createdAt and updatedAt
 });
+orderSchema.index({ userId: 1, status: 1 }); // Index for faster queries by user and status
+orderSchema.index({ items: 1 }); // Index for faster queries by items
+orderSchema.index( { 'address.pincode': 1 }); // Index for faster queries by pincode
+orderSchema.index({ 'payment.transactionId': 1 }); // Index for faster queries by payment method
 
 const Order = moongoose.model<Order>('Order', orderSchema);
 export default Order;

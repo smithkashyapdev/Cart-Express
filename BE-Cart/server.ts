@@ -1,7 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
 import express from 'express';
-import cors from 'cors';
 import connectDB from './src/config/db'
 import authRoute from './src/routes/user-route'
 import { logQueryStats } from './src/utils/query-stats';
@@ -9,11 +8,16 @@ import mongoose from 'mongoose';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './src/docs/swaggerOptions';
 const { isMainThread, threadId } = require('worker_threads');
+import csrf from 'csurf';
+import { corsMiddleware } from './src/middleware/cors-middelware';
+import morgan from 'morgan';
+import logger from './src/middleware/logger';
+import helmet from 'helmet';
 
 const cluster = require('cluster');
 const os = require('os');
 const numCPUs = os.cpus().length;
-
+const csrfProtection = csrf({ cookie: true });
 
  dotenv.config();
     connectDB()
@@ -31,9 +35,16 @@ const numCPUs = os.cpus().length;
         console.log(`📄 Swagger UI available at http://localhost:${PORT}/api-docs`);
     }
 
+    app.use(csrfProtection);
     app.use(logQueryStats);
-    app.use(cors());
+    app.use(morgan('combined', {
+  stream: {
+    write: (message) => logger.info(message.trim())
+  }
+}));
+    app.use(corsMiddleware);
     app.use(express.json());
+    app.use(helmet())
     app.use('/api/auth', authRoute);
     app.listen(PORT, () => {
         console.log(isMainThread, threadId, numCPUs)

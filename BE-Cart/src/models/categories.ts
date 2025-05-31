@@ -14,5 +14,7 @@ const categorySchema = new Schema<ICategory>({
   updatedAt: { type: Date, default: Date.now }
 });
 
+categorySchema.index({ name: 'text' }); // Text index for full-text search
+
 const Category = moongoose.model<ICategory>('Category', categorySchema);
 export default Category;
