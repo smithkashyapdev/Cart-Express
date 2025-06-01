@@ -4,6 +4,7 @@ import User from '../models/Users';
 import { OtpModel } from '../models/otp.model';
 import { generateOTP, sendOtpToMobile, sendEmail } from '../utils/otp';
 import { generateToken } from '../middleware/jwt-authenticate';
+import { AuthenticatedRequest } from '../types';
 
 const registerUser = async (req: Request, res: Response): Promise<void> => {
   const { name, email, password, mobile } = req.body
@@ -16,8 +17,8 @@ const registerUser = async (req: Request, res: Response): Promise<void> => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({ name, mobile, email, password: hashedPassword, image });
     const saved = await newUser.save();
-
-    res.status(201).json({ message: 'User registered successfully', userId: saved._id });
+    const jwtToken = generateToken(saved);
+    res.status(201).json({ message: 'User registered successfully', token: jwtToken, userId: saved._id });
   } catch (err) {
     res.status(500).json({ message: 'Error registering user', error: err });
   }
@@ -68,6 +69,8 @@ const verifyOTP = async (req: Request, res: Response): Promise<void> => {
 const signInUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { mobile, password } = req.body;
+    console.log('Mobile:', mobile);
+    console.log('Password:', password);
     const user = await User.findOne({ mobile });
     if (!user) {
       res.status(404).json({ message: 'User not found' });
@@ -93,8 +96,9 @@ const signInUser = async (req: Request, res: Response): Promise<void> => {
 
 const getUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { userId } = req.body;; // Assuming user ID is stored in req.user by JWT middleware
-    const user = await User.findById(userId).select('-password'); // Exclude password from response
+    //console.log('Request body:', req?.user);
+    const { id } = (req as unknown as AuthenticatedRequest).user; // Assuming user ID is stored in req.user by JWT middleware
+    const user = await User.findById(id).select('-password'); // Exclude password from response
     if (!user) {
       res.status(404).json({ message: 'User not found' });
       return;
@@ -132,7 +136,7 @@ const updateUserProfile = async (req: Request, res: Response): Promise<void> => 
 
 const deleteUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { userId } = req.body; // Assuming user ID is stored in req.user by JWT middleware
+    const { userId } = req.params; // Assuming user ID is stored in req.user by JWT middleware
 
     const deletedUser = await User.findByIdAndDelete(userId);
     if (!deletedUser) {

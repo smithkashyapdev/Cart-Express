@@ -5,13 +5,17 @@ import { body, validationResult } from 'express-validator';
 import { validateRequest } from '../middleware/validate-request';
 import apiLimiter from '../middleware/api-limitter';
 import { authenticateJWT, clearToken } from '../middleware/jwt-authenticate';
+import authorizeRoles from '../middleware/role-authenticate';
 const router = express.Router();
-const { registerUser, sendOTP, verifyOTP, signInUser, updateUserProfile, deleteUserProfile , getUserProfile, logoutUser } = userController;
+const { registerUser, sendOTP, verifyOTP, signInUser, updateUserProfile, deleteUserProfile, getUserProfile, logoutUser } = userController;
 /**
  * @swagger
- * tags:
- *   name: Auth
- *   description: User authentication routes
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
  */
 
 
@@ -19,10 +23,10 @@ const { registerUser, sendOTP, verifyOTP, signInUser, updateUserProfile, deleteU
 
 // Validation middleware using express-validator
 const validateOtp = [
-    body('mobile')
+  body('mobile')
     .notEmpty().withMessage("Mobile number can't be empty.").bail()
     .matches(/^\+91[6-9]\d{9}$/).withMessage("Mobile number must start with +91 and be a valid 10-digit Indian number."),
-  
+
   body('email')
     .notEmpty().withMessage("Email is required.").bail()
     .isEmail().withMessage("Enter a valid email address."),
@@ -34,6 +38,8 @@ const validateOtp = [
  *   post:
  *     summary: Send OTP to user's mobile number
  *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []  # ⬅️ This adds JWT token requirement in the header
  *     requestBody:
  *       required: true
  *       content:
@@ -49,15 +55,21 @@ const validateOtp = [
  *     responses:
  *       200:
  *         description: OTP sent successfully
+ *       401:
+ *         description: Unauthorized - missing or invalid token
+ *       403:
+ *         description: Forbidden - insufficient role
  */
-router.post('/send-otp', apiLimiter, validateOtp, validateRequest , sendOTP);
+router.post('/send-otp', apiLimiter, authenticateJWT, authorizeRoles('admin', 'seller', 'user'), validateOtp, validateRequest, sendOTP);
 
 /**
  * @swagger
- * /api/otp/verify:
+ * /api/auth/verify-otp:
  *   post:
  *     summary: Verify OTP
  *     tags: [Auth]
+ *     security:
+ *     - bearerAuth: []  # This tells Swagger to use the Authorization header
  *     requestBody:
  *       required: true
  *       content:
@@ -77,12 +89,14 @@ router.post('/send-otp', apiLimiter, validateOtp, validateRequest , sendOTP);
  *         description: OTP verified successfully
  *       401:
  *         description: Invalid or expired OTP
+ *       401:
+ *         description: Unauthorized - missing or invalid token
  */
-router.post('/verify-otp', verifyOTP);
+router.post('/verify-otp', authenticateJWT, authorizeRoles('admin', 'seller', 'user'), verifyOTP);
 
 /**
  * @swagger
- * /api/users/signup:
+ * /api/auth/signup:
  *   post:
  *     summary: Register a new user with profile image
  *     tags: [Auth]
@@ -116,6 +130,10 @@ router.post('/verify-otp', verifyOTP);
  *                 type: string
  *                 format: binary
  *                 description: Profile image file
+ *               role: 
+ *                type: string
+ *                enum: [seller, user]
+ *                description: User registration with role security. 
  *     responses:
  *       201:
  *         description: User registered successfully
@@ -144,16 +162,16 @@ router.post('/verify-otp', verifyOTP);
  *         description: Internal server error during registration
  */
 
-router.post('/signup', apiLimiter,  upload.single('image'), registerUser);
+router.post('/signup', apiLimiter, upload.single('image'), registerUser);
 
 const validateUser = [
-    body('mobile')
+  body('mobile')
     .notEmpty().withMessage("Mobile number can't be empty.").bail()
     .matches(/^\+91[6-9]\d{9}$/).withMessage("Mobile number must start with +91 and be a valid 10-digit Indian number."),
-  
+
   body('password')
     .notEmpty().withMessage("password is required.").bail()
-]; 
+];
 
 /**
  * @swagger
@@ -173,16 +191,35 @@ const validateUser = [
  *             properties:
  *               mobile:
  *                 type: string
- *                 example: "9876543210"
+ *                 example: "9878250491"
  *               password:
  *                 type: string
  *                 format: password
- *                 example: secret123
+ *                 example: User@4321
  *     responses:
  *       200:
  *         description: User signed in successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *       401:
+ *         description: Invalid credentials
  */
-router.post('signin', apiLimiter, validateUser, signInUser)
+router.post('/signin', apiLimiter, validateUser, signInUser)
 
 /**
  * @swagger
@@ -223,8 +260,7 @@ router.post('signin', apiLimiter, validateUser, signInUser)
  *       description: Internal server error during profile update
  * 
  * */
-router.put('/update', apiLimiter, authenticateJWT, upload.single('image'), updateUserProfile)
-
+router.put('/update', apiLimiter, authenticateJWT, authorizeRoles('admin', 'seller', 'user'), upload.single('image'), updateUserProfile)
 
 /**
  * @swagger
@@ -238,7 +274,7 @@ router.put('/update', apiLimiter, authenticateJWT, upload.single('image'), updat
  *       401:
  *         description: Unauthorized, user not authenticated
  */
-router.get('/profile', apiLimiter, authenticateJWT, getUserProfile)
+router.get('/profile', apiLimiter, authenticateJWT, authorizeRoles('admin', 'seller', 'user'), getUserProfile)
 
 /**
  * @swagger
@@ -258,15 +294,34 @@ router.get('/logout', apiLimiter, authenticateJWT, clearToken, logoutUser)
  * @swagger
  * /api/auth/delete:
  *   delete:
- *     summary: Delete user profile
+ *     summary: Delete a user profile by admin
  *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: The ID of the user to delete
+ *                 example: "66596d920b88c4bba6c3e2fb"
  *     responses:
  *       200:
  *         description: User profile deleted successfully
  *       401:
  *         description: Unauthorized, user not authenticated
+ *       403:
+ *         description: Forbidden, only admin can delete users
+ *       404:
+ *         description: User not found
  */
-router.delete('/delete', apiLimiter, authenticateJWT, deleteUserProfile)
+router.delete('/delete', apiLimiter, authenticateJWT, authorizeRoles('admin'), deleteUserProfile)
 
 
-export default router;
+export { router as userRouter };

@@ -1,7 +1,7 @@
 import moongoose, { Document, ObjectId, Schema } from 'mongoose';
 
 import Category from './categories';
-import Seller from './seller';
+import Users from './Users';
 
 interface IProduct extends Document {
   name: String,
@@ -31,7 +31,7 @@ const productSchema = new Schema<IProduct>({
     stock: { type: Number, required: true },
     images: { type: [String], required: true },
     categoryid: { type: Schema.Types.ObjectId, ref: Category, required: true },
-    sellerId: { type: Schema.Types.ObjectId, ref: Seller, required: true },
+    sellerId: { type: Schema.Types.ObjectId, ref: Users, required: true },
     ratings: {
       average: { type: Number, default: 0 },
       count: { type: Number, default: 0 }

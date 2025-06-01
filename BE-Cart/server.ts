@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 import express from 'express';
 import connectDB from './src/config/db'
-import authRoute from './src/routes/user-route'
+import { userRouter, productRouter } from './src/routes'
 import { logQueryStats } from './src/utils/query-stats';
 import mongoose from 'mongoose';
 import swaggerUi from 'swagger-ui-express';
@@ -35,7 +35,7 @@ const csrfProtection = csrf({ cookie: true });
         console.log(`📄 Swagger UI available at http://localhost:${PORT}/api-docs`);
     }
 
-    app.use(csrfProtection);
+    //app.use(csrfProtection);
     app.use(logQueryStats);
     app.use(morgan('combined', {
   stream: {
@@ -45,7 +45,8 @@ const csrfProtection = csrf({ cookie: true });
     app.use(corsMiddleware);
     app.use(express.json());
     app.use(helmet())
-    app.use('/api/auth', authRoute);
+    app.use('/api/auth', userRouter);
+    app.use('/api/products', productRouter);
     app.listen(PORT, () => {
         console.log(isMainThread, threadId, numCPUs)
         console.log(`Server running on port ${PORT}`)
